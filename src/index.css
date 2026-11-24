@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-canvas: #F8FAFC;
+    --bg-deep: #F1F5F9;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F8FAFC;
+    --bg-raised: #F1F5F9;
+    --border-subtle: #E2E8F0;
+    --border-focus: #CBD5E1;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    --accent-emerald: #10B981;
+    --accent-gold: #C5A059;
+    --accent-amber: #D97706;
+    --ease-out-quart: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .dark {
+    --bg-canvas: #0A0A0A;
+    --bg-deep: #0D0D0C;
+    --bg-card: #141413;
+    --bg-card-hover: #1A1A18;
+    --bg-raised: #1F1F1D;
+    --border-subtle: #262624;
+    --border-focus: #3D3D39;
+    --text-primary: #F2F0EC;
+    --text-secondary: #A39E93;
+    --text-muted: #78746C;
+    --accent-emerald: #10B981;
+    --accent-gold: #C5A059;
+    --accent-amber: #D97706;
+  }
+
+  html {
+    font-family: Inter, 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+  }
+
+  /* Monetary and numbers tabular alignment */
+  .font-mono,
+  .tabular-nums,
+  table td,
+  input[type="number"] {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  /* Keycap signature element */
+  kbd.keycap {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    line-height: 1;
+    padding: 3px 6px;
+    border-radius: 5px;
+    background-color: var(--bg-raised);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+  }
+
+  /* Safe area bottom padding for iOS/Safari mobile navigation */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Custom subtle scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg-canvas);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-focus);
+  }
+}
+
+/* Print Styling for Executive PDF Exports */
+@media print {
+  aside,
+  header,
+  nav,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background-color: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

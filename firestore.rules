@@ -1,0 +1,939 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Application: CONCECT FINANÇAS
+// Architecture: Strictly Multi-Tenant Scoped under /users/{userId}
+//
+// Root Collection:
+//   users/{userId}
+//     - id: string (required, immutable, must match auth.uid)
+//     - name: string (required, 1-100 chars)
+//     - email: string (required, immutable, valid email format)
+//     - pin_hash: string (optional, 0-64 chars)
+//     - two_factor_enabled: bool (optional)
+//     - whatsapp_number: string (optional, 0-30 chars)
+//     - whatsapp_lid: string (optional, 0-64 chars)
+//     - theme_preference: string (optional, ['dark', 'light'])
+//     - active_profile_type: string (optional, ['INDIVIDUAL', 'FAMILY', 'BUSINESS'])
+//     - privacy_mode: bool (optional)
+//     - created_at: timestamp|string (optional)
+//     - updated_at: timestamp|string (optional)
+//
+// Subcollections under users/{userId}:
+//
+// 1. accounts/{accountId} (Bank Accounts)
+//     - workspace_id: string (required, 1-50 chars)
+//     - name: string (required, 1-100 chars)
+//     - institution: string (required, 1-100 chars)
+//     - type: string (required, ['CHECKING', 'SAVINGS', 'INVESTMENT', 'CASH'])
+//     - initial_balance: number (required)
+//     - current_balance: number (required)
+//     - color: string (required, 1-30 chars)
+//     - icon: string (optional, 1-50 chars)
+//     - id: string (optional, 1-100 chars)
+//
+// 2. cards/{cardId} (Credit Cards)
+//     - workspace_id: string (required, 1-50 chars)
+//     - name: string (required, 1-100 chars)
+//     - brand: string (required, ['Mastercard', 'Visa', 'Elo', 'Amex', 'Outros'])
+//     - total_limit: number (required, >= 0)
+//     - available_limit: number (required)
+//     - closing_day: int (required, 1-31)
+//     - due_day: int (required, 1-31)
+//     - color: string (required, 1-30 chars)
+//     - bank_account_id: string (optional, 1-100 chars)
+//     - card_last_digits: string (optional, 1-10 chars)
+//     - id: string (optional, 1-100 chars)
+//
+// 3. invoices/{invoiceId} (Credit Card Invoices)
+//     - card_id: string (required, 1-100 chars)
+//     - reference_month: int (required, 1-12)
+//     - reference_year: int (required, 2000-2100)
+//     - total_amount: number (required, >= 0)
+//     - status: string (required, ['OPEN', 'CLOSED', 'PAID', 'OVERDUE'])
+//     - due_date: string (required, 4-30 chars)
+//     - closing_date: string (required, 4-30 chars)
+//     - reference_key: string (optional, 0-20 chars)
+//     - paid_at: timestamp|string (optional, string <= 40 chars)
+//     - paid_account_id: string (optional, 0-100 chars)
+//     - id: string (optional, 1-100 chars)
+//
+// 4. categories/{categoryId} (Income & Expense Categories)
+//     - workspace_id: string (required, 1-50 chars)
+//     - name: string (required, 1-100 chars)
+//     - type: string (required, ['INCOME', 'EXPENSE'])
+//     - monthly_budget_limit: number (optional, >= 0)
+//     - icon: string (required, 1-50 chars)
+//     - color: string (required, 1-30 chars)
+//     - is_system: bool (optional)
+//     - id: string (optional, 1-100 chars)
+//
+// 5. transactions/{transactionId} (Financial Transactions & Installments)
+//     - workspace_id: string (required, 1-50 chars)
+//     - category_id: string (required, 1-100 chars)
+//     - type: string (required, ['INCOME', 'EXPENSE', 'TRANSFER'])
+//     - amount: number (required, >= 0)
+//     - description: string (required, 1-250 chars)
+//     - date: string (required, 4-30 chars)
+//     - status: string (required, ['PENDING', 'PAID', 'OVERDUE'])
+//     - is_recurring: bool (required)
+//     - source: string (required, ['APP', 'WHATSAPP'])
+//     - account_id: string (optional, 1-100 chars)
+//     - destination_account_id: string (optional, 1-100 chars)
+//     - card_id: string (optional, 1-100 chars)
+//     - invoice_id: string (optional, 1-100 chars)
+//     - installment_current: int (optional, >= 1)
+//     - installment_total: int (optional, >= 1)
+//     - parent_transaction_id: string (optional, 1-100 chars)
+//     - recurring_source_id: string (optional, 0-120 chars)
+//     - reference_month: string (optional, 0-20 chars)
+//     - cost_center_id: string (optional, 0-100 chars)
+//     - notes: string (optional, 0-1000 chars)
+//     - tags: list of strings (optional, <= 20 items)
+//     - created_at: timestamp|string (optional)
+//     - id: string (optional, 1-100 chars)
+//
+// 6. subscriptions/{subscriptionId} (Subscriptions & Loans)
+//     - workspace_id: string (required, 1-50 chars)
+//     - name: string (required, 1-100 chars)
+//     - type: string (required, ['SUBSCRIPTION', 'LOAN'])
+//     - amount: number (required, >= 0)
+//     - billing_cycle: string (required, ['MONTHLY', 'YEARLY', 'WEEKLY'])
+//     - next_billing_date: string (required, 4-30 chars)
+//     - category_id: string (required, 1-100 chars)
+//     - payment_method: string (required, ['ACCOUNT', 'CARD'])
+//     - creditor: string (optional, 0-100 chars)
+//     - initial_debt: number (optional, >= 0)
+//     - remaining_installments: int (optional, >= 0)
+//     - paid_installments: int (optional, >= 0)
+//     - total_installments: int (optional, >= 0)
+//     - total_debt: number (optional, >= 0)
+//     - interest_rate: number (optional)
+//     - interest_period: string (optional, ['MONTHLY', 'YEARLY'])
+//     - notes: string (optional, 0-1000 chars)
+//     - card_id: string (optional, 1-100 chars)
+//     - account_id: string (optional, 1-100 chars)
+//     - id: string (optional, 1-100 chars)
+//
+// 7. goals/{goalId} (Financial Goals & Reserves)
+//     - workspace_id: string (required, 1-50 chars)
+//     - title: string (required, 1-100 chars)
+//     - type: string (required, ['INCOME', 'SAVINGS', 'EXPENSE_REDUCTION', 'DEBT_PAYOFF', 'PURCHASE', 'EMERGENCY_FUND', 'INVESTMENT'])
+//     - target_amount: number (required, >= 0)
+//     - current_amount: number (required, >= 0)
+//     - deadline: string (required, 4-30 chars)
+//     - status: string (required, ['IN_PROGRESS', 'COMPLETED', 'PAUSED'])
+//     - created_at: string (required, 4-30 chars)
+//     - notes: string (optional, 0-1000 chars)
+//     - monthly_target_contribution: number (optional, >= 0)
+//     - auto_calculate_emergency_months: number (optional, >= 0)
+//     - id: string (optional, 1-100 chars)
+//
+// 8. gamification/{docId} (Gamification Profile & Challenges)
+//     - user_id: string (required, immutable, must match auth.uid)
+//     - xp_points: number (required, >= 0)
+//     - level: number (required, >= 1)
+//     - level_title: string (required, 1-100 chars)
+//     - current_streak: number (required, >= 0)
+//     - longest_streak: number (required, >= 0)
+//     - financial_health_score: number (required, 0-1000)
+//     - score_factors: map (required, factors: savings_rate, bill_punctuality, credit_utilization, emergency_fund)
+//     - badges_unlocked: list of strings (required, <= 100 items)
+//     - active_challenges: list of maps (required, <= 50 items)
+//
+// 9. notifications/{notificationId} (In-App & Push Notifications)
+//     - user_id: string (required, immutable, must match auth.uid)
+//     - title: string (required, 1-150 chars)
+//     - message: string (required, 1-1000 chars)
+//     - trigger_date: string (required, 4-30 chars)
+//     - type: string (required, ['DUE_SOON', 'OVERDUE', 'BUDGET_EXCEEDED', 'ANOMALY', 'DAILY_SUMMARY', 'MONTH_CLOSING', 'GOAL_MILESTONE'])
+//     - channel: string (required, ['APP', 'WHATSAPP'])
+//     - is_read: bool (required)
+//     - status: string (required, ['PENDING', 'SENT', 'DISMISSED'])
+//     - id: string (optional, 1-100 chars)
+//
+// 10. whatsapp_logs/{logId} (AI WhatsApp Assistant Chat & Audit Logs)
+//     - user_id: string (required, immutable, must match auth.uid)
+//     - sender: string (required, ['USER', 'AGENT'])
+//     - message: string (required, 1-2500 chars)
+//     - timestamp: string (required, 1-50 chars)
+//     - raw_message: string (optional, 0-2500 chars)
+//     - parsed_intent: string (optional, ['ADD_EXPENSE', 'ADD_INCOME', 'QUERY_BALANCE', 'QUERY_EXPENSES', 'QUERY_DUE', 'SET_REMINDER', 'CREATE_GOAL', 'UNKNOWN'])
+//     - extracted_json: map (optional)
+//     - requires_confirmation: bool (optional)
+//     - confirmed_at: string (optional, 0-50 chars)
+//     - options: list (optional, <= 20 items)
+//     - created_at: timestamp|string (optional)
+//     - id: string (optional, 1-100 chars)
+//
+// 11. reminders/{reminderId} (Financial & Bill Reminders)
+//     - title: string (required, 1-200 chars)
+//     - due_date: string (required, 4-30 chars)
+//     - type: string (required, ['PAYABLE', 'RECEIVABLE', 'GENERAL'])
+//     - status: string (required, ['PENDING', 'PAID', 'DISMISSED'])
+//     - amount: number (optional)
+//     - workspace_id: string (optional, 1-50 chars)
+//     - category_id: string (optional, 0-100 chars)
+//     - is_recurring: bool (optional)
+//     - notes: string (optional, 0-1000 chars)
+//     - linked_transaction_id: string (optional, 0-100 chars)
+//     - paid_account_id: string (optional, 0-100 chars)
+//     - paid_at: timestamp|string (optional, string <= 40 chars)
+//     - created_at: timestamp|string (optional)
+//     - updated_at: timestamp|string (optional)
+//     - id: string (optional, 1-100 chars)
+//
+// 12. chat_history/{messageId} (AI & WhatsApp Chat History)
+//     - channel: string (required, ['CONSULTANT', 'WHATSAPP'])
+//     - sender: string (required, ['USER', 'AI'])
+//     - text: string (required, 1-10000 chars)
+//     - timestamp: string (required, 1-50 chars)
+//     - intent: string (optional, 1-50 chars)
+//     - action_payload: map (optional)
+//     - requires_confirmation: bool (optional)
+//     - options: list (optional, <= 20 items)
+//     - created_at: timestamp|string (optional)
+//     - updated_at: timestamp|string (optional)
+//     - id: string (optional, 1-100 chars)
+//
+// 13. assets/{assetId} (Patrimony Assets: Investments & Properties)
+//     - workspace_id: string (required, 1-50 chars)
+//     - kind: string (required, ['INVESTMENT', 'PROPERTY'])
+//     - category: string (required, ['CDB', 'TESOURO', 'ACOES', 'FII', 'FUNDOS', 'CRIPTO', 'IMOVEL', 'VEICULO', 'OUTROS'])
+//     - name: string (required, 1-120 chars)
+//     - invested_amount: number (required, >= 0)
+//     - current_value: number (required, >= 0)
+//     - institution: string (optional, 0-100 chars)
+//     - quantity: number (optional, >= 0)
+//     - purchase_date: string (optional, 0-30 chars)
+//     - reported_yield_pct: number (optional)
+//     - notes: string (optional, 0-1000 chars)
+//     - created_at: timestamp|string (optional, string <= 50 chars)
+//     - updated_at: timestamp|string (optional, string <= 50 chars)
+//     - id: string (optional, 1-100 chars)
+//
+// 14. clients/{clientId} (Business PJ Clients)
+//     - workspace_id: string (required, 1-50 chars)
+//     - name: string (required, 1-150 chars)
+//     - contract_value: number (required, >= 0)
+//     - status: string (required, ['ACTIVE', 'INACTIVE'])
+//     - document: string (optional, 0-40 chars)
+//     - contact: string (optional, 0-150 chars)
+//     - commission_pct: number (optional, 0-100)
+//     - commission_amount: number (optional, >= 0)
+//     - billing_day: int (optional, 1-31)
+//     - notes: string (optional, 0-1000 chars)
+//     - created_at: timestamp|string (optional, string <= 50 chars)
+//     - updated_at: timestamp|string (optional, string <= 50 chars)
+//     - id: string (optional, 0-100 chars)
+//
+// 15. suppliers/{supplierId} (Business PJ Suppliers)
+//     - workspace_id: string (required, 1-50 chars)
+//     - name: string (required, 1-150 chars)
+//     - default_category_id: string (optional, 0-100 chars)
+//     - document_or_pix: string (optional, 0-120 chars)
+//     - contact: string (optional, 0-150 chars)
+//     - notes: string (optional, 0-1000 chars)
+//     - created_at: timestamp|string (optional, string <= 50 chars)
+//     - updated_at: timestamp|string (optional, string <= 50 chars)
+//     - id: string (optional, 0-100 chars)
+//
+// 16. cost_centers/{costCenterId} (Business PJ Cost Centers)
+//     - workspace_id: string (required, 1-50 chars)
+//     - name: string (required, 1-100 chars)
+//     - code: string (optional, 0-30 chars)
+//     - monthly_budget: number (optional, >= 0)
+//     - color: string (optional, 0-30 chars)
+//     - created_at: timestamp|string (optional, string <= 50 chars)
+//     - updated_at: timestamp|string (optional, string <= 50 chars)
+//     - id: string (optional, 0-100 chars)
+//
+// Root Collection:
+//   system_config/{docId} (Global System Configuration)
+//     Specifically: system_config/whatsapp_status
+//     - status: string (optional, ['DISCONNECTED', 'WAITING_QR', 'CONNECTED'])
+//     - botNumber: string (optional, 0-30 chars)
+//     - botNumberDisplay: string (optional, 0-50 chars)
+//     - qr: string|null (optional, <= 2000 chars)
+//     - qrDataUrl: string|null (optional, <= 200000 chars)
+//     - updatedAt: timestamp|string (optional, <= 50 chars)
+//     - connectedAt: timestamp|string (optional, <= 50 chars)
+//     - created_at: timestamp|string (optional, <= 50 chars)
+//     - id: string (optional, 1-100 chars)
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Global Default Deny
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    // Check if client is authenticated via Firebase Auth
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if authenticated client matches the target userId
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if client is the official WhatsApp Bot service account
+    function isBot() {
+      return isAuthenticated() && (
+        request.auth.uid == 'KNdgvuw8T1XY43tcQnG9l18LTXY2' ||
+        (request.auth.token != null && request.auth.token.email == 'bot@concectfinancas.com')
+      );
+    }
+
+    // Validate email format and bounded length
+    function isValidEmail(email) {
+      return email is string &&
+        email.size() <= 150 &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // Check that immutable document ID remains unchanged on update
+    function isIdUnchanged() {
+      return !('id' in request.resource.data) ||
+        !('id' in resource.data) ||
+        request.resource.data.id == resource.data.id;
+    }
+
+    // Check that immutable user_id field remains unchanged on update
+    function isUserIdUnchanged() {
+      return !('user_id' in request.resource.data) ||
+        !('user_id' in resource.data) ||
+        request.resource.data.user_id == resource.data.user_id;
+    }
+
+    // ===============================================================
+    // Domain Validators (Validator Function Pattern)
+    // ===============================================================
+
+    // 1. User Profile Validator
+    function isValidUser(data, userId) {
+      return data.keys().hasAll(['id', 'name', 'email']) &&
+        data.keys().hasOnly([
+          'id', 'name', 'email', 'pin_hash', 'two_factor_enabled',
+          'whatsapp_number', 'whatsapp_lid', 'whatsapp_variants', 'whatsapp_connected', 'whatsapp_linked_at',
+          'theme_preference', 'active_profile_type',
+          'privacy_mode', 'auth_provider', 'authProvider', 'created_at', 'updated_at'
+        ]) &&
+        data.id == userId &&
+        data.id == request.auth.uid &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        data.email is string && isValidEmail(data.email) &&
+        (!('pin_hash' in data) || (data.pin_hash is string && data.pin_hash.size() <= 64)) &&
+        (!('two_factor_enabled' in data) || data.two_factor_enabled is bool) &&
+        (!('whatsapp_number' in data) || (data.whatsapp_number is string && data.whatsapp_number.size() <= 30)) &&
+        (!('whatsapp_lid' in data) || (data.whatsapp_lid is string && data.whatsapp_lid.size() <= 64)) &&
+        (!('whatsapp_variants' in data) || (data.whatsapp_variants is list && data.whatsapp_variants.size() <= 10)) &&
+        (!('whatsapp_connected' in data) || data.whatsapp_connected is bool) &&
+        (!('whatsapp_linked_at' in data) || data.whatsapp_linked_at is timestamp || data.whatsapp_linked_at is string) &&
+        (!('theme_preference' in data) || data.theme_preference in ['dark', 'light']) &&
+        (!('active_profile_type' in data) || data.active_profile_type in ['INDIVIDUAL', 'FAMILY', 'BUSINESS']) &&
+        (!('privacy_mode' in data) || data.privacy_mode is bool) &&
+        (!('auth_provider' in data) || (data.auth_provider is string && data.auth_provider.size() <= 30)) &&
+        (!('authProvider' in data) || (data.authProvider is string && data.authProvider.size() <= 30)) &&
+        (!('created_at' in data) || data.created_at is timestamp || data.created_at is string) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    // 2. Bank Account Validator
+    function isValidAccount(data) {
+      return data.keys().hasAll([
+          'workspace_id', 'name', 'institution', 'type',
+          'initial_balance', 'current_balance', 'color'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'workspace_id', 'name', 'institution', 'type',
+          'initial_balance', 'current_balance', 'color', 'icon',
+          'created_at', 'updated_at'
+        ]) &&
+        data.workspace_id is string && data.workspace_id.size() >= 1 && data.workspace_id.size() <= 50 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        data.institution is string && data.institution.size() >= 1 && data.institution.size() <= 100 &&
+        data.type in ['CHECKING', 'SAVINGS', 'INVESTMENT', 'CASH'] &&
+        data.initial_balance is number &&
+        data.current_balance is number &&
+        data.color is string && data.color.size() >= 1 && data.color.size() <= 30 &&
+        (!('icon' in data) || (data.icon is string && data.icon.size() <= 50)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || data.created_at is string) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    // 3. Credit Card Validator
+    function isValidCard(data) {
+      return data.keys().hasAll([
+          'workspace_id', 'name', 'brand', 'total_limit',
+          'available_limit', 'closing_day', 'due_day', 'color'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'workspace_id', 'name', 'brand', 'total_limit',
+          'available_limit', 'closing_day', 'due_day', 'color',
+          'bank_account_id', 'card_last_digits', 'created_at', 'updated_at'
+        ]) &&
+        data.workspace_id is string && data.workspace_id.size() >= 1 && data.workspace_id.size() <= 50 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        data.brand in ['Mastercard', 'Visa', 'Elo', 'Amex', 'Outros'] &&
+        data.total_limit is number && data.total_limit >= 0 &&
+        data.available_limit is number &&
+        data.closing_day is int && data.closing_day >= 1 && data.closing_day <= 31 &&
+        data.due_day is int && data.due_day >= 1 && data.due_day <= 31 &&
+        data.color is string && data.color.size() >= 1 && data.color.size() <= 30 &&
+        (!('bank_account_id' in data) || (data.bank_account_id is string && data.bank_account_id.size() <= 100)) &&
+        (!('card_last_digits' in data) || (data.card_last_digits is string && data.card_last_digits.size() <= 10)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || data.created_at is string) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    // 4. Credit Card Invoice Validator
+    function isValidInvoice(data) {
+      return data.keys().hasAll([
+          'card_id', 'reference_month', 'reference_year',
+          'total_amount', 'status', 'due_date', 'closing_date'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'card_id', 'reference_month', 'reference_year',
+          'total_amount', 'status', 'due_date', 'closing_date',
+          'reference_key', 'paid_at', 'paid_account_id',
+          'created_at', 'updated_at'
+        ]) &&
+        data.card_id is string && data.card_id.size() >= 1 && data.card_id.size() <= 100 &&
+        data.reference_month is int && data.reference_month >= 1 && data.reference_month <= 12 &&
+        data.reference_year is int && data.reference_year >= 2000 && data.reference_year <= 2100 &&
+        data.total_amount is number && data.total_amount >= 0 &&
+        data.status in ['OPEN', 'CLOSED', 'PAID', 'OVERDUE'] &&
+        data.due_date is string && data.due_date.size() >= 4 && data.due_date.size() <= 30 &&
+        data.closing_date is string && data.closing_date.size() >= 4 && data.closing_date.size() <= 30 &&
+        (!('reference_key' in data) || (data.reference_key is string && data.reference_key.size() <= 20)) &&
+        (!('paid_at' in data) || data.paid_at is timestamp || (data.paid_at is string && data.paid_at.size() <= 40)) &&
+        (!('paid_account_id' in data) || (data.paid_account_id is string && data.paid_account_id.size() <= 100)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || data.created_at is string) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    // 5. Category Validator
+    function isValidCategory(data) {
+      return data.keys().hasAll(['workspace_id', 'name', 'type', 'icon', 'color']) &&
+        data.keys().hasOnly([
+          'id', 'workspace_id', 'name', 'type', 'monthly_budget_limit',
+          'icon', 'color', 'is_system', 'created_at', 'updated_at'
+        ]) &&
+        data.workspace_id is string && data.workspace_id.size() >= 1 && data.workspace_id.size() <= 50 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        data.type in ['INCOME', 'EXPENSE'] &&
+        data.icon is string && data.icon.size() >= 1 && data.icon.size() <= 50 &&
+        data.color is string && data.color.size() >= 1 && data.color.size() <= 30 &&
+        (!('monthly_budget_limit' in data) || (data.monthly_budget_limit is number && data.monthly_budget_limit >= 0)) &&
+        (!('is_system' in data) || data.is_system is bool) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || data.created_at is string) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    // 6. Transaction Validator
+    function isValidTransaction(data) {
+      return data.keys().hasAll([
+          'workspace_id', 'category_id', 'type', 'amount',
+          'description', 'date', 'status', 'is_recurring', 'source'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'workspace_id', 'account_id', 'destination_account_id',
+          'card_id', 'invoice_id', 'category_id', 'type', 'amount',
+          'description', 'date', 'status', 'is_recurring',
+          'installment_current', 'installment_total', 'parent_transaction_id',
+          'recurring_source_id', 'reference_month', 'cost_center_id',
+          'source', 'notes', 'tags', 'created_at', 'updated_at'
+        ]) &&
+        data.workspace_id is string && data.workspace_id.size() >= 1 && data.workspace_id.size() <= 50 &&
+        data.category_id is string && data.category_id.size() >= 1 && data.category_id.size() <= 100 &&
+        data.type in ['INCOME', 'EXPENSE', 'TRANSFER'] &&
+        data.amount is number && data.amount >= 0 &&
+        data.description is string && data.description.size() >= 1 && data.description.size() <= 250 &&
+        data.date is string && data.date.size() >= 4 && data.date.size() <= 30 &&
+        data.status in ['PENDING', 'PAID', 'OVERDUE'] &&
+        data.is_recurring is bool &&
+        data.source in ['APP', 'WHATSAPP'] &&
+        (!('account_id' in data) || (data.account_id is string && data.account_id.size() <= 100)) &&
+        (!('destination_account_id' in data) || (data.destination_account_id is string && data.destination_account_id.size() <= 100)) &&
+        (!('card_id' in data) || (data.card_id is string && data.card_id.size() <= 100)) &&
+        (!('invoice_id' in data) || (data.invoice_id is string && data.invoice_id.size() <= 100)) &&
+        (!('installment_current' in data) || (data.installment_current is int && data.installment_current >= 1)) &&
+        (!('installment_total' in data) || (data.installment_total is int && data.installment_total >= 1)) &&
+        (!('parent_transaction_id' in data) || (data.parent_transaction_id is string && data.parent_transaction_id.size() <= 100)) &&
+        (!('recurring_source_id' in data) || (data.recurring_source_id is string && data.recurring_source_id.size() <= 120)) &&
+        (!('reference_month' in data) || (data.reference_month is string && data.reference_month.size() <= 20)) &&
+        (!('cost_center_id' in data) || (data.cost_center_id is string && data.cost_center_id.size() <= 100)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || data.created_at is string) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    // 7. Subscription & Loan Validator
+    function isValidSubscription(data) {
+      return data.keys().hasAll([
+          'workspace_id', 'name', 'type', 'amount',
+          'billing_cycle', 'next_billing_date', 'category_id', 'payment_method'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'workspace_id', 'name', 'type', 'amount', 'billing_cycle',
+          'next_billing_date', 'category_id', 'payment_method',
+          'creditor', 'initial_debt', 'remaining_installments', 'paid_installments',
+          'total_installments', 'total_debt', 'interest_rate', 'interest_period',
+          'notes', 'card_id', 'account_id', 'created_at', 'updated_at'
+        ]) &&
+        data.workspace_id is string && data.workspace_id.size() >= 1 && data.workspace_id.size() <= 50 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        data.type in ['SUBSCRIPTION', 'LOAN'] &&
+        data.amount is number && data.amount >= 0 &&
+        data.billing_cycle in ['MONTHLY', 'YEARLY', 'WEEKLY'] &&
+        data.next_billing_date is string && data.next_billing_date.size() >= 4 && data.next_billing_date.size() <= 30 &&
+        data.category_id is string && data.category_id.size() >= 1 && data.category_id.size() <= 100 &&
+        data.payment_method in ['ACCOUNT', 'CARD'] &&
+        (!('creditor' in data) || (data.creditor is string && data.creditor.size() <= 100)) &&
+        (!('initial_debt' in data) || (data.initial_debt is number && data.initial_debt >= 0)) &&
+        (!('remaining_installments' in data) || (data.remaining_installments is int && data.remaining_installments >= 0)) &&
+        (!('paid_installments' in data) || (data.paid_installments is int && data.paid_installments >= 0)) &&
+        (!('total_installments' in data) || (data.total_installments is int && data.total_installments >= 0)) &&
+        (!('total_debt' in data) || (data.total_debt is number && data.total_debt >= 0)) &&
+        (!('interest_rate' in data) || data.interest_rate is number) &&
+        (!('interest_period' in data) || data.interest_period in ['MONTHLY', 'YEARLY']) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        (!('card_id' in data) || (data.card_id is string && data.card_id.size() <= 100)) &&
+        (!('account_id' in data) || (data.account_id is string && data.account_id.size() <= 100)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || data.created_at is string) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    // 8. Goal Validator
+    function isValidGoal(data) {
+      return data.keys().hasAll([
+          'workspace_id', 'title', 'type', 'target_amount',
+          'current_amount', 'deadline', 'status', 'created_at'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'workspace_id', 'title', 'type', 'target_amount',
+          'current_amount', 'deadline', 'status', 'created_at',
+          'notes', 'monthly_target_contribution',
+          'auto_calculate_emergency_months', 'updated_at'
+        ]) &&
+        data.workspace_id is string && data.workspace_id.size() >= 1 && data.workspace_id.size() <= 50 &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+        data.type in ['INCOME', 'SAVINGS', 'EXPENSE_REDUCTION', 'DEBT_PAYOFF', 'PURCHASE', 'EMERGENCY_FUND', 'INVESTMENT'] &&
+        data.target_amount is number && data.target_amount >= 0 &&
+        data.current_amount is number && data.current_amount >= 0 &&
+        data.deadline is string && data.deadline.size() >= 4 && data.deadline.size() <= 30 &&
+        data.status in ['IN_PROGRESS', 'COMPLETED', 'PAUSED'] &&
+        data.created_at is string && data.created_at.size() >= 4 && data.created_at.size() <= 30 &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        (!('monthly_target_contribution' in data) || (data.monthly_target_contribution is number && data.monthly_target_contribution >= 0)) &&
+        (!('auto_calculate_emergency_months' in data) || (data.auto_calculate_emergency_months is number && data.auto_calculate_emergency_months >= 0)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    // 9. Gamification Profile Validator
+    function isValidGamification(data, userId) {
+      return data.keys().hasAll([
+          'user_id', 'xp_points', 'level', 'level_title',
+          'current_streak', 'longest_streak', 'financial_health_score',
+          'score_factors', 'badges_unlocked', 'active_challenges'
+        ]) &&
+        data.keys().hasOnly([
+          'user_id', 'xp_points', 'level', 'level_title',
+          'current_streak', 'longest_streak', 'financial_health_score',
+          'score_factors', 'badges_unlocked', 'active_challenges',
+          'created_at', 'updated_at'
+        ]) &&
+        data.user_id == userId &&
+        data.user_id == request.auth.uid &&
+        data.xp_points is number && data.xp_points >= 0 &&
+        data.level is number && data.level >= 1 &&
+        data.level_title is string && data.level_title.size() >= 1 && data.level_title.size() <= 100 &&
+        data.current_streak is number && data.current_streak >= 0 &&
+        data.longest_streak is number && data.longest_streak >= 0 &&
+        data.financial_health_score is number && data.financial_health_score >= 0 && data.financial_health_score <= 1000 &&
+        data.score_factors is map &&
+        data.score_factors.keys().hasAll(['savings_rate', 'bill_punctuality', 'credit_utilization', 'emergency_fund']) &&
+        data.badges_unlocked is list && data.badges_unlocked.size() <= 100 &&
+        data.active_challenges is list && data.active_challenges.size() <= 50 &&
+        (!('created_at' in data) || data.created_at is timestamp || data.created_at is string) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    function isValidGamificationProfile(data, userId) {
+      return isValidGamification(data, userId);
+    }
+
+    // 10. Notification Validator
+    function isValidNotification(data, userId) {
+      return data.keys().hasAll([
+          'user_id', 'title', 'message', 'trigger_date',
+          'type', 'channel', 'is_read', 'status'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'user_id', 'title', 'message', 'trigger_date',
+          'type', 'channel', 'is_read', 'status', 'created_at', 'updated_at'
+        ]) &&
+        data.user_id == userId &&
+        data.user_id == request.auth.uid &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 150 &&
+        data.message is string && data.message.size() >= 1 && data.message.size() <= 1000 &&
+        data.trigger_date is string && data.trigger_date.size() >= 4 && data.trigger_date.size() <= 30 &&
+        data.type in ['DUE_SOON', 'OVERDUE', 'BUDGET_EXCEEDED', 'ANOMALY', 'DAILY_SUMMARY', 'MONTH_CLOSING', 'GOAL_MILESTONE'] &&
+        data.channel in ['APP', 'WHATSAPP'] &&
+        data.is_read is bool &&
+        data.status in ['PENDING', 'SENT', 'DISMISSED'] &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || data.created_at is string) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    // 11. WhatsApp Log Validator
+    function isValidWhatsAppLog(data, userId) {
+      return data.keys().hasAll(['user_id', 'sender', 'message', 'timestamp']) &&
+        data.keys().hasOnly([
+          'id', 'user_id', 'sender', 'message', 'timestamp', 'created_at',
+          'raw_message', 'parsed_intent', 'extracted_json',
+          'requires_confirmation', 'confirmed_at', 'options', 'updated_at'
+        ]) &&
+        data.user_id == userId &&
+        data.user_id == request.auth.uid &&
+        data.sender in ['USER', 'AGENT'] &&
+        data.message is string && data.message.size() >= 1 && data.message.size() <= 2500 &&
+        data.timestamp is string && data.timestamp.size() >= 1 && data.timestamp.size() <= 50 &&
+        (!('raw_message' in data) || (data.raw_message is string && data.raw_message.size() <= 2500)) &&
+        (!('parsed_intent' in data) || data.parsed_intent in [
+          'ADD_EXPENSE', 'ADD_INCOME', 'QUERY_BALANCE', 'QUERY_EXPENSES',
+          'QUERY_DUE', 'SET_REMINDER', 'CREATE_GOAL', 'UNKNOWN'
+        ]) &&
+        (!('extracted_json' in data) || data.extracted_json is map) &&
+        (!('requires_confirmation' in data) || data.requires_confirmation is bool) &&
+        (!('confirmed_at' in data) || (data.confirmed_at is string && data.confirmed_at.size() <= 50)) &&
+        (!('options' in data) || (data.options is list && data.options.size() <= 20)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || data.created_at is string) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    // 12. Reminder Validator
+    function isValidReminder(data) {
+      return data.keys().hasAll(['title', 'due_date', 'type', 'status']) &&
+        data.keys().hasOnly([
+          'id', 'workspace_id', 'title', 'amount', 'due_date', 'type', 'status',
+          'category_id', 'is_recurring', 'notes', 'linked_transaction_id',
+          'paid_account_id', 'paid_at',
+          'created_at', 'updated_at'
+        ]) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+        data.due_date is string && data.due_date.size() >= 4 && data.due_date.size() <= 30 &&
+        data.type in ['PAYABLE', 'RECEIVABLE', 'GENERAL'] &&
+        data.status in ['PENDING', 'PAID', 'DISMISSED'] &&
+        (!('amount' in data) || data.amount is number) &&
+        (!('workspace_id' in data) || (data.workspace_id is string && data.workspace_id.size() <= 50)) &&
+        (!('category_id' in data) || (data.category_id is string && data.category_id.size() <= 100)) &&
+        (!('is_recurring' in data) || data.is_recurring is bool) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        (!('linked_transaction_id' in data) || (data.linked_transaction_id is string && data.linked_transaction_id.size() <= 100)) &&
+        (!('paid_account_id' in data) || (data.paid_account_id is string && data.paid_account_id.size() <= 100)) &&
+        (!('paid_at' in data) || data.paid_at is timestamp || (data.paid_at is string && data.paid_at.size() <= 40)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || data.created_at is string) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    // 13. Chat History Validator
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['channel', 'sender', 'text', 'timestamp']) &&
+        data.keys().hasOnly([
+          'id', 'channel', 'sender', 'text', 'timestamp', 'intent', 'action_payload',
+          'requires_confirmation', 'options', 'created_at', 'updated_at'
+        ]) &&
+        data.channel in ['CONSULTANT', 'WHATSAPP'] &&
+        data.sender in ['USER', 'AI'] &&
+        data.text is string && data.text.size() >= 1 && data.text.size() <= 10000 &&
+        data.timestamp is string && data.timestamp.size() >= 1 && data.timestamp.size() <= 50 &&
+        (!('intent' in data) || (data.intent is string && data.intent.size() <= 50)) &&
+        (!('action_payload' in data) || data.action_payload is map) &&
+        (!('requires_confirmation' in data) || data.requires_confirmation is bool) &&
+        (!('options' in data) || (data.options is list && data.options.size() <= 20)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || data.created_at is string) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || data.updated_at is string);
+    }
+
+    // 14. System Config - WhatsApp Status Validator
+    function isValidWhatsAppStatus(data) {
+      return data.keys().hasOnly([
+          'status', 'botNumber', 'botNumberDisplay', 'qr', 'qrDataUrl',
+          'updatedAt', 'connectedAt', 'created_at', 'id'
+        ]) &&
+        (!('status' in data) || data.status in ['DISCONNECTED', 'WAITING_QR', 'CONNECTED']) &&
+        (!('botNumber' in data) || data.botNumber == null || (data.botNumber is string && data.botNumber.size() <= 30)) &&
+        (!('botNumberDisplay' in data) || data.botNumberDisplay == null || (data.botNumberDisplay is string && data.botNumberDisplay.size() <= 50)) &&
+        (!('qr' in data) || data.qr == null || (data.qr is string && data.qr.size() <= 2000)) &&
+        (!('qrDataUrl' in data) || data.qrDataUrl == null || (data.qrDataUrl is string && data.qrDataUrl.size() <= 200000)) &&
+        (!('updatedAt' in data) || data.updatedAt == null || data.updatedAt is timestamp || (data.updatedAt is string && data.updatedAt.size() <= 50)) &&
+        (!('connectedAt' in data) || data.connectedAt == null || data.connectedAt is timestamp || (data.connectedAt is string && data.connectedAt.size() <= 50)) &&
+        (!('created_at' in data) || data.created_at == null || data.created_at is timestamp || (data.created_at is string && data.created_at.size() <= 50)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100));
+    }
+
+    // 15. Patrimony Asset Validator (Investments & Properties)
+    function isValidAsset(data) {
+      return data.keys().hasAll([
+          'workspace_id', 'kind', 'category', 'name',
+          'invested_amount', 'current_value'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'workspace_id', 'kind', 'category', 'name', 'institution',
+          'invested_amount', 'current_value', 'quantity', 'purchase_date',
+          'reported_yield_pct', 'notes', 'created_at', 'updated_at'
+        ]) &&
+        data.workspace_id is string && data.workspace_id.size() >= 1 && data.workspace_id.size() <= 50 &&
+        data.kind in ['INVESTMENT', 'PROPERTY'] &&
+        data.category in ['CDB', 'TESOURO', 'ACOES', 'FII', 'FUNDOS', 'CRIPTO', 'IMOVEL', 'VEICULO', 'OUTROS'] &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.invested_amount is number && data.invested_amount >= 0 &&
+        data.current_value is number && data.current_value >= 0 &&
+        (!('institution' in data) || (data.institution is string && data.institution.size() <= 100)) &&
+        (!('quantity' in data) || (data.quantity is number && data.quantity >= 0)) &&
+        (!('purchase_date' in data) || (data.purchase_date is string && data.purchase_date.size() <= 30)) &&
+        (!('reported_yield_pct' in data) || data.reported_yield_pct is number) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || (data.created_at is string && data.created_at.size() <= 50)) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || (data.updated_at is string && data.updated_at.size() <= 50));
+    }
+
+    // 16. Business PJ Client Validator
+    function isValidClient(data) {
+      return data.keys().hasAll([
+          'workspace_id', 'name', 'contract_value', 'status'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'workspace_id', 'name', 'document', 'contact',
+          'contract_value', 'commission_pct', 'commission_amount',
+          'billing_day', 'status', 'notes', 'created_at', 'updated_at'
+        ]) &&
+        data.workspace_id is string && data.workspace_id.size() >= 1 && data.workspace_id.size() <= 50 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+        data.contract_value is number && data.contract_value >= 0 &&
+        data.status in ['ACTIVE', 'INACTIVE'] &&
+        (!('document' in data) || (data.document is string && data.document.size() <= 40)) &&
+        (!('contact' in data) || (data.contact is string && data.contact.size() <= 150)) &&
+        (!('commission_pct' in data) || (data.commission_pct is number && data.commission_pct >= 0 && data.commission_pct <= 100)) &&
+        (!('commission_amount' in data) || (data.commission_amount is number && data.commission_amount >= 0)) &&
+        (!('billing_day' in data) || (data.billing_day is int && data.billing_day >= 1 && data.billing_day <= 31)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || (data.created_at is string && data.created_at.size() <= 50)) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || (data.updated_at is string && data.updated_at.size() <= 50));
+    }
+
+    // 17. Business PJ Supplier Validator
+    function isValidSupplier(data) {
+      return data.keys().hasAll([
+          'workspace_id', 'name'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'workspace_id', 'name', 'default_category_id',
+          'document_or_pix', 'contact', 'notes', 'created_at', 'updated_at'
+        ]) &&
+        data.workspace_id is string && data.workspace_id.size() >= 1 && data.workspace_id.size() <= 50 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+        (!('default_category_id' in data) || (data.default_category_id is string && data.default_category_id.size() <= 100)) &&
+        (!('document_or_pix' in data) || (data.document_or_pix is string && data.document_or_pix.size() <= 120)) &&
+        (!('contact' in data) || (data.contact is string && data.contact.size() <= 150)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || (data.created_at is string && data.created_at.size() <= 50)) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || (data.updated_at is string && data.updated_at.size() <= 50));
+    }
+
+    // 18. Business PJ Cost Center Validator
+    function isValidCostCenter(data) {
+      return data.keys().hasAll([
+          'workspace_id', 'name'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'workspace_id', 'name', 'code', 'monthly_budget',
+          'color', 'created_at', 'updated_at'
+        ]) &&
+        data.workspace_id is string && data.workspace_id.size() >= 1 && data.workspace_id.size() <= 50 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        (!('code' in data) || (data.code is string && data.code.size() <= 30)) &&
+        (!('monthly_budget' in data) || (data.monthly_budget is number && data.monthly_budget >= 0)) &&
+        (!('color' in data) || (data.color is string && data.color.size() <= 30)) &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 100)) &&
+        (!('created_at' in data) || data.created_at is timestamp || (data.created_at is string && data.created_at.size() <= 50)) &&
+        (!('updated_at' in data) || data.updated_at is timestamp || (data.updated_at is string && data.updated_at.size() <= 50));
+    }
+
+    // ===============================================================
+    // Rules Match Blocks
+    // ===============================================================
+
+    match /users/{userId} {
+      // User Document: strictly scoped to owner or bot
+      allow get: if isOwner(userId) || isBot();
+      allow list: if isBot();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data, userId);
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data, userId) && isIdUnchanged()) || isBot();
+      allow delete: if isOwner(userId);
+
+      // Subcollection: accounts
+      match /accounts/{accountId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidAccount(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidAccount(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: cards
+      match /cards/{cardId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidCard(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidCard(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: invoices
+      match /invoices/{invoiceId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidInvoice(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidInvoice(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: categories
+      match /categories/{categoryId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidCategory(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidCategory(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: transactions
+      match /transactions/{transactionId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidTransaction(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidTransaction(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: subscriptions
+      match /subscriptions/{subscriptionId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidSubscription(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidSubscription(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: goals
+      match /goals/{goalId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidGoal(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidGoal(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: gamification
+      match /gamification/{docId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidGamificationProfile(request.resource.data, userId)) || isBot();
+        allow update: if (isOwner(userId) && isValidGamificationProfile(request.resource.data, userId) && isUserIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: notifications
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidNotification(request.resource.data, userId)) || isBot();
+        allow update: if (isOwner(userId) && isValidNotification(request.resource.data, userId) && isUserIdUnchanged() && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: whatsapp_logs
+      match /whatsapp_logs/{logId} {
+        allow read, write: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: reminders
+      match /reminders/{reminderId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidReminder(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidReminder(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: chat_history
+      match /chat_history/{chatId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidChatMessage(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidChatMessage(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: assets
+      match /assets/{assetId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidAsset(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidAsset(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: clients
+      match /clients/{clientId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidClient(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidClient(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: suppliers
+      match /suppliers/{supplierId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidSupplier(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidSupplier(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+
+      // Subcollection: cost_centers
+      match /cost_centers/{costCenterId} {
+        allow read: if isOwner(userId) || isBot();
+        allow create: if (isOwner(userId) && isValidCostCenter(request.resource.data)) || isBot();
+        allow update: if (isOwner(userId) && isValidCostCenter(request.resource.data) && isIdUnchanged()) || isBot();
+        allow delete: if isOwner(userId) || isBot();
+      }
+    }
+
+    // ===============================================================
+    // Root Collection: System Configuration
+    // ===============================================================
+    match /system_config/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
+

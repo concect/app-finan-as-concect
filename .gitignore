@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Production Build
+dist/
+
+# WhatsApp Baileys Auth Session
+whatsapp_auth/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+serviceAccountKey.json
+*firebase-adminsdk*.json
+
+# Firebase CLI Cache
+.firebase/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS Files
+.DS_Store
+Thumbs.db
