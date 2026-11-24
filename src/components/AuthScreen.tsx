@@ -138,11 +138,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onEnterDemo }
   };
 
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center p-4 sm:p-6 selection:bg-[#10B981] selection:text-black">
-      <div className="w-full max-w-md bg-surface border border-subtle rounded-2xl p-5 sm:p-8 relative">
+    <div className="min-h-[100dvh] bg-canvas flex flex-col items-center justify-center py-3 px-4 sm:p-6 selection:bg-[#10B981] selection:text-black">
+      <div className="w-full max-w-md bg-surface border border-subtle rounded-2xl p-4 sm:p-6 relative">
         {/* Brand Header */}
-        <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-10 h-10 rounded-lg bg-raised border border-subtle p-2 flex items-center justify-center mb-3">
+        <div className="flex flex-col items-center text-center mb-3.5 sm:mb-5">
+          <div className="w-9 h-9 rounded-lg bg-raised border border-subtle p-1.5 flex items-center justify-center mb-2">
             <img
               src="/assets/logo/iconesite.webp"
               alt="Concect"
@@ -150,34 +150,44 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onEnterDemo }
               onError={e => ((e.target as HTMLElement).style.display = 'none')}
             />
           </div>
-          <h1 className="text-lg font-medium text-primary tracking-tight">
+          <h1 className="text-lg sm:text-xl font-medium text-primary tracking-tight leading-tight">
             Concect Finanças
           </h1>
-          <p className="text-[13px] text-secondary mt-1">
-            Controle patrimonial, faturas e conciliação via WhatsApp
+          <p className="text-xs text-secondary mt-0.5 truncate max-w-full">
+            Patrimônio, faturas e conciliação inteligente
           </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="grid grid-cols-2 bg-canvas p-1 rounded-lg border border-subtle mb-6">
+        {/* Tab Switcher with Sliding Indicator */}
+        <div
+          role="tablist"
+          aria-label="Modo de autenticação"
+          className="relative grid grid-cols-2 bg-canvas p-1 rounded-lg border border-subtle mb-3.5 sm:mb-4"
+        >
+          <span
+            aria-hidden="true"
+            className={`pointer-events-none absolute top-1 bottom-1 left-1 w-[calc(50%-0.25rem)] rounded-md bg-raised border border-subtle/60 shadow-sm transition-transform duration-300 ease-out motion-reduce:transition-none ${
+              isRegister ? 'translate-x-full' : 'translate-x-0'
+            }`}
+          />
           <button
             type="button"
-            onClick={() => { setIsRegister(false); setError(null); }}
-            className={`h-8 text-xs font-medium rounded-md transition-colors ${
-              !isRegister
-                ? 'bg-raised text-primary'
-                : 'text-muted hover:text-primary'
+            role="tab"
+            aria-selected={!isRegister}
+            onClick={() => { setIsRegister(false); setError(null); setResetSuccess(null); }}
+            className={`relative z-10 h-8 text-xs font-medium rounded-md transition-colors duration-200 motion-reduce:transition-none ${
+              !isRegister ? 'text-primary' : 'text-muted hover:text-primary'
             }`}
           >
             Entrar
           </button>
           <button
             type="button"
-            onClick={() => { setIsRegister(true); setError(null); }}
-            className={`h-8 text-xs font-medium rounded-md transition-colors ${
-              isRegister
-                ? 'bg-raised text-primary'
-                : 'text-muted hover:text-primary'
+            role="tab"
+            aria-selected={isRegister}
+            onClick={() => { setIsRegister(true); setError(null); setResetSuccess(null); }}
+            className={`relative z-10 h-8 text-xs font-medium rounded-md transition-colors duration-200 motion-reduce:transition-none ${
+              isRegister ? 'text-primary' : 'text-muted hover:text-primary'
             }`}
           >
             Criar conta
@@ -186,31 +196,33 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onEnterDemo }
 
         {/* Error / Success Notifications */}
         {error && (
-          <div className="p-3 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-lg text-xs text-[#EF4444] flex items-center gap-2.5 mb-4">
+          <div className="p-2.5 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-lg text-xs text-[#EF4444] flex items-center gap-2 mb-3">
             <AlertCircle className="w-4 h-4 stroke-[1.5] flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {resetSuccess && (
-          <div className="p-3 bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg text-xs text-[#10B981] flex items-center gap-2.5 mb-4">
+          <div className="p-2.5 bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg text-xs text-[#10B981] flex items-center gap-2 mb-3">
             <CheckCircle2 className="w-4 h-4 stroke-[1.5] flex-shrink-0" />
             <span>{resetSuccess}</span>
           </div>
         )}
 
-        {/* Social Logins */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+        {/* Social Logins — Compact Side-by-Side Icon Buttons */}
+        <div className="grid grid-cols-2 gap-2.5 mb-3 sm:mb-4">
           <button
             type="button"
             onClick={handleGoogleLogin}
             disabled={googleLoading || appleLoading || emailLoading}
-            className="w-full h-10 px-3 bg-raised hover:bg-surface-hover border border-subtle text-xs font-medium text-primary rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-[0.98] disabled:opacity-50"
+            aria-label="Entrar com Google"
+            title="Entrar com Google"
+            className="w-full h-10 bg-raised hover:bg-surface-hover border border-subtle text-primary rounded-lg flex items-center justify-center transition-colors active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 disabled:opacity-50"
           >
             {googleLoading ? (
               <div className="w-4 h-4 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
             ) : (
-              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+              <svg className="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   fill="#4285F4"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -229,46 +241,57 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onEnterDemo }
                 />
               </svg>
             )}
-            <span className="truncate">Google</span>
           </button>
 
           <button
             type="button"
             onClick={handleAppleLogin}
             disabled={googleLoading || appleLoading || emailLoading}
-            className="w-full h-10 px-3 bg-raised hover:bg-surface-hover border border-subtle text-xs font-medium text-primary rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-[0.98] disabled:opacity-50"
+            aria-label="Entrar com Apple"
+            title="Entrar com Apple"
+            className="w-full h-10 bg-raised hover:bg-surface-hover border border-subtle text-primary rounded-lg flex items-center justify-center transition-colors active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 disabled:opacity-50"
           >
             {appleLoading ? (
               <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
             ) : (
-              <svg className="w-4 h-4 flex-shrink-0 fill-current" viewBox="0 0 170 170">
+              <svg className="w-[18px] h-[18px] flex-shrink-0 fill-current" viewBox="0 0 170 170" aria-hidden="true">
                 <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.7-11.64-13.98-6.19-9.5-11.04-20.44-14.55-32.83-3.51-12.39-5.26-23.77-5.26-34.13 0-14.42 3.65-26.4 10.96-35.95 7.31-9.56 16.59-14.43 27.84-14.62 5.07 0 10.59 1.33 16.56 3.99 5.97 2.66 9.87 4.05 11.71 4.17 1.84 0 5.86-1.42 12.06-4.26 6.2-2.84 11.66-4.13 16.38-3.87 12.63.76 22.84 5.28 30.64 13.56-11.02 6.64-16.38 15.82-16.08 27.53.3 11.39 4.87 20.73 13.71 28.02 4.02 3.34 8.78 5.82 14.28 7.44-2.88 8.64-6.43 17.18-10.66 25.62zM119.22 31.84c0-7.39 2.66-14.33 7.97-20.82 5.31-6.49 11.83-10.49 19.56-12.02.26 1.32.39 2.45.39 3.39 0 7.39-2.73 14.33-8.19 20.82-5.46 6.49-11.88 10.36-19.26 11.6-.13-1.06-.47-2.05-.47-2.97z" />
               </svg>
             )}
-            <span className="truncate">Apple</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-3 my-5">
+        <div className="flex items-center gap-3 my-3 sm:my-4">
           <div className="flex-1 h-px bg-subtle" />
-          <span className="text-xs text-muted">
+          <span className="text-[11px] sm:text-xs text-muted">
             ou continue com e-mail
           </span>
           <div className="flex-1 h-px bg-subtle" />
         </div>
 
         {/* Credentials Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {isRegister && (
-            <div>
-              <label className="block text-xs font-normal text-secondary mb-1.5">
+        <form onSubmit={handleSubmit}>
+          {/* Animated Full Name Field (Smooth Height + Opacity + Margin) */}
+          <div
+            aria-hidden={!isRegister}
+            className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-out motion-reduce:transition-none ${
+              isRegister
+                ? 'grid-rows-[1fr] opacity-100 mb-3 sm:mb-4'
+                : 'grid-rows-[0fr] opacity-0 mb-0 pointer-events-none'
+            }`}
+          >
+            <div className="overflow-hidden">
+              <label htmlFor="auth-name" className="block text-xs font-normal text-secondary mb-1">
                 Nome completo
               </label>
               <div className="relative">
                 <UserIcon className="w-4 h-4 stroke-[1.5] absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
+                  id="auth-name"
                   type="text"
-                  required
+                  required={isRegister}
+                  tabIndex={isRegister ? 0 : -1}
+                  autoComplete="name"
                   placeholder="Seu nome"
                   value={name}
                   onChange={e => setName(e.target.value)}
@@ -276,81 +299,106 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onEnterDemo }
                 />
               </div>
             </div>
-          )}
-
-          <div>
-            <label className="block text-xs font-normal text-secondary mb-1.5">
-              E-mail
-            </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 stroke-[1.5] absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-              <input
-                type="email"
-                required
-                placeholder="nome@empresa.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full h-10 bg-canvas border border-subtle focus:border-[#10B981] rounded-lg pl-9 pr-3 text-xs text-primary outline-none transition-colors"
-              />
-            </div>
           </div>
 
-          <div>
-            <div className="flex justify-between items-center mb-1.5">
-              <label className="text-xs font-normal text-secondary">
-                Senha
+          <div className="space-y-3 sm:space-y-4">
+            <div>
+              <label htmlFor="auth-email" className="block text-xs font-normal text-secondary mb-1">
+                E-mail
               </label>
-              {!isRegister && (
+              <div className="relative">
+                <Mail className="w-4 h-4 stroke-[1.5] absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  id="auth-email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="nome@empresa.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full h-10 bg-canvas border border-subtle focus:border-[#10B981] rounded-lg pl-9 pr-3 text-xs text-primary outline-none transition-colors"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label htmlFor="auth-password" className="text-xs font-normal text-secondary">
+                  Senha
+                </label>
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="text-xs text-secondary hover:text-primary transition-colors"
+                  tabIndex={isRegister ? -1 : 0}
+                  aria-hidden={isRegister}
+                  className={`text-xs text-secondary hover:text-primary transition-opacity duration-200 motion-reduce:transition-none ${
+                    isRegister ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                  }`}
                 >
                   Recuperar senha
                 </button>
-              )}
+              </div>
+              <div className="relative">
+                <Lock className="w-4 h-4 stroke-[1.5] absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  id="auth-password"
+                  type="password"
+                  required
+                  autoComplete={isRegister ? 'new-password' : 'current-password'}
+                  placeholder="Mínimo de 6 caracteres"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full h-10 bg-canvas border border-subtle focus:border-[#10B981] rounded-lg pl-9 pr-3 text-xs text-primary outline-none transition-colors"
+                />
+              </div>
             </div>
-            <div className="relative">
-              <Lock className="w-4 h-4 stroke-[1.5] absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-              <input
-                type="password"
-                required
-                placeholder="Mínimo de 6 caracteres"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full h-10 bg-canvas border border-subtle focus:border-[#10B981] rounded-lg pl-9 pr-3 text-xs text-primary outline-none transition-colors"
-              />
-            </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={emailLoading || googleLoading || appleLoading}
-            className="w-full h-10 px-4 bg-primary hover:opacity-90 text-canvas font-medium text-[13px] rounded-lg flex items-center justify-center gap-2 transition-opacity active:scale-[0.98] disabled:opacity-50 mt-2"
-          >
-            {emailLoading ? (
-              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <span>{isRegister ? 'Criar conta' : 'Acessar carteira'}</span>
-                <ArrowRight className="w-4 h-4 stroke-[1.5]" />
-              </>
-            )}
-          </button>
+            <button
+              type="submit"
+              disabled={emailLoading || googleLoading || appleLoading}
+              className="w-full h-10 px-4 bg-primary hover:opacity-90 text-canvas font-medium text-[13px] rounded-lg flex items-center justify-center gap-2 transition-opacity active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 disabled:opacity-50"
+            >
+              {emailLoading ? (
+                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span className="inline-grid place-items-center">
+                    <span
+                      aria-hidden={isRegister}
+                      className={`col-start-1 row-start-1 transition-opacity duration-200 motion-reduce:transition-none ${
+                        isRegister ? 'opacity-0' : 'opacity-100'
+                      }`}
+                    >
+                      Acessar carteira
+                    </span>
+                    <span
+                      aria-hidden={!isRegister}
+                      className={`col-start-1 row-start-1 transition-opacity duration-200 motion-reduce:transition-none ${
+                        isRegister ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    >
+                      Criar conta
+                    </span>
+                  </span>
+                  <ArrowRight className="w-4 h-4 stroke-[1.5]" />
+                </>
+              )}
+            </button>
+          </div>
         </form>
 
         {onEnterDemo && (
-          <div className="mt-5 pt-5 border-t border-subtle space-y-2.5">
+          <div className="mt-3.5 pt-3.5 sm:mt-4 sm:pt-4 border-t border-subtle space-y-1.5">
             <button
               type="button"
               onClick={onEnterDemo}
-              className="w-full h-10 px-4 bg-canvas hover:bg-raised border border-subtle hover:border-border-focus text-primary font-medium text-xs rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
+              className="w-full h-10 px-4 bg-canvas hover:bg-raised border border-subtle hover:border-border-focus text-primary font-medium text-xs sm:text-sm rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
             >
               <Play className="w-3.5 h-3.5 stroke-[1.75] text-[#10B981]" />
               <span>Explorar Modo Demonstração</span>
             </button>
-            <p className="text-[11px] text-muted text-center">
-              6 meses de dados fictícios isolados (Pessoal, Família e PJ com DRE) — sem cadastro
+            <p className="text-[11px] text-muted text-center truncate">
+              Testar com 6 meses de dados fictícios — sem cadastro
             </p>
           </div>
         )}
